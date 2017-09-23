@@ -41,7 +41,7 @@
         </props>
     </property>
     </bean>-->
-    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+    <!-- <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
         <property name="driverClassName" value="org.postgresql.Driver"></property>
         <property name="url" value="jdbc:postgresql://35.196.47.240:5432/myweddingservice"></property>
         <property name="username" value="postgres"></property>
@@ -52,8 +52,20 @@
             <prop key="characterEncoding">utf8</prop>
         </props>
     </property>
-    </bean>
+    </bean> -->
 
+<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="org.postgresql.Driver"></property>
+        <property name="url" value="jdbc:postgresql://localhost:5432/myweddingservice"></property>
+        <property name="username" value="postgres"></property>
+        <property name="password" value="abc123!@#"></property>
+        <property name="connectionProperties">
+        <props>
+            <prop key="useUnicode">yes</prop>
+            <prop key="characterEncoding">utf8</prop>
+        </props>
+    </property>
+    </bean>
    <aop:aspectj-autoproxy />
 	
 	<bean id="transactionManager"
