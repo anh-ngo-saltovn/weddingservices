@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:tx="http://www.springframework.org/schema/tx" 
+    xmlns:util="http://www.springframework.org/schema/util"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+                        http://www.springframework.org/schema/beans/spring-beans.xsd
+                        http://www.springframework.org/schema/aop
+                        http://www.springframework.org/schema/aop/spring-aop.xsd
+                        http://www.springframework.org/schema/tx
+                        http://www.springframework.org/schema/tx/spring-tx.xsd
+                        http://www.springframework.org/schema/context
+                        http://www.springframework.org/schema/context/spring-context.xsd
+                        http://www.springframework.org/schema/util 
+                        http://www.springframework.org/schema/util/spring-util.xsd
+                        http://www.springframework.org/schema/data/jpa
+                        http://www.springframework.org/schema/data/jpa/spring-jpa.xsd">
+    <!-- <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="com.mysql.jdbc.Driver"></property>
+        <property name="url" value="jdbc:mysql://localhost:3306/myweddingservice"></property>
+        <property name="username" value="root"></property>
+        <property name="password" value="abc123!@#"></property>
+        <property name="connectionProperties">
+	    <props>
+	        <prop key="useUnicode">yes</prop>
+	        <prop key="characterEncoding">utf8</prop>
+	    </props>
+	</property>
+    </bean> -->
+   <!-- <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="org.postgresql.Driver"></property>
+        <property name="url" value="jdbc:postgresql://ec2-54-221-221-153.compute-1.amazonaws.com:5432/d35fpjohnjo0q0"></property>
+        <property name="username" value="hbhifjrspxkmaw"></property>
+        <property name="password" value="43fc1ae19f2f4d07725484b0a077c60eefcd9cc102ada0c5c239650bff905707"></property>
+        <property name="connectionProperties">
+        <props>
+            <prop key="useUnicode">yes</prop>
+            <prop key="characterEncoding">utf8</prop>
+        </props>
+    </property>
+    </bean>-->
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="org.postgresql.Driver"></property>
+        <property name="url" value="jdbc:postgresql://35.196.47.240:5432/myweddingservice"></property>
+        <property name="username" value="postgres"></property>
+        <property name="password" value="abc123!@#"></property>
+        <property name="connectionProperties">
+        <props>
+            <prop key="useUnicode">yes</prop>
+            <prop key="characterEncoding">utf8</prop>
+        </props>
+    </property>
+    </bean>
+
+   <aop:aspectj-autoproxy />
+	
+	<bean id="transactionManager"
+	    class="org.springframework.orm.jpa.JpaTransactionManager">
+	    <property name="dataSource" ref="dataSource" />
+	</bean>
+    
+    <bean id="entityManagerFactory"
+    class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+	    <property name="packagesToScan" value="com.weddingservices.model"/>
+	    <property name="dataSource" ref="dataSource" />
+	
+	    <property name="jpaProperties">
+	        <props>
+	            <prop key="">true</prop>
+	              <!-- <prop key="hibernate.hbm2ddl.auto">create-drop</prop> -->
+	            <!-- <prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop> -->
+	            <prop key="hibernate.dialect">org.hibernate.dialect.PostgreSQLDialect</prop>
+	        </props>
+	    </property>
+	
+	    <property name="persistenceProvider">
+	        <bean class="org.hibernate.jpa.HibernatePersistenceProvider"></bean>
+	    </property>
+	
+	</bean>
+    <jpa:repositories base-package="com.weddingservices.repositories" 
+        entity-manager-factory-ref="entityManagerFactory" 
+        transaction-manager-ref="transactionManager"/>
+</beans>

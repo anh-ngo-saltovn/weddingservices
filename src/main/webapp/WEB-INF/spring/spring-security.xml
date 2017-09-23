@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xmlns:oauth="http://www.springframework.org/schema/security/oauth2"
+    xmlns:sec="http://www.springframework.org/schema/security"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="http://www.springframework.org/schema/security/oauth2 
+        http://www.springframework.org/schema/security/spring-security-oauth2.xsd
+        http://www.springframework.org/schema/security 
+        http://www.springframework.org/schema/security/spring-security.xsd
+        http://www.springframework.org/schema/beans 
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context 
+        http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!-- Create client details bean for manage client details from database -->
+    <bean id="clientDetails" class="org.springframework.security.oauth2.provider.client.JdbcClientDetailsService">
+        <constructor-arg ref="dataSource"></constructor-arg>
+    </bean>
+
+    <!-- Configure Authentication manager -->
+    <bean id="passwordEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder">
+        <constructor-arg name="strength" value="11" />
+    </bean>
+
+   <bean id="clientDetailsUserService"
+        class="org.springframework.security.oauth2.provider.client.ClientDetailsUserDetailsService">
+        <constructor-arg ref="clientDetails" />
+    </bean>
+
+    <sec:authentication-manager alias="authenticationManager">
+        <sec:authentication-provider user-service-ref="clientDetailsUserService">
+            <sec:password-encoder ref="passwordEncoder" />
+        </sec:authentication-provider>
+    </sec:authentication-manager>
+
+    <!-- Oauth Token Service Using Database -->
+    <bean id="tokenStore" class="org.springframework.security.oauth2.provider.token.store.JdbcTokenStore">
+        <constructor-arg ref="dataSource" />
+    </bean>
+
+    <!-- This the service class which is used to access the function of JdbcTokenStore 
+        class. This is like MVC structure JdbcTokenStore is Dao layer and DefaultTokenServices 
+        is service layer -->
+    <bean id="tokenServices" class="org.springframework.security.oauth2.provider.token.DefaultTokenServices">
+        <property name="tokenStore" ref="tokenStore" />
+        <property name="supportRefreshToken" value="true" />
+        <property name="clientDetailsService" ref="clientDetails" />
+        <property name="accessTokenValiditySeconds" value="4500" />
+    </bean>
+
+    <!-- A user approval handler that remembers approval decisions by consulting existing tokens -->
+    <bean id="oAuth2RequestFactory" class="org.springframework.security.oauth2.provider.request.DefaultOAuth2RequestFactory">
+        <constructor-arg ref="clientDetails" />
+    </bean>
+    
+    <bean id="userApprovalHandler" class="org.springframework.security.oauth2.provider.approval.TokenStoreUserApprovalHandler">
+        <property name="requestFactory" ref="oAuth2RequestFactory" />
+        <property name="tokenStore" ref="tokenStore" />
+    </bean>
+
+    <!-- Authorization Server Configuration of the server is used to provide 
+        implementations of the client details service and token services and to enable 
+        or disable certain aspects of the mechanism globally. -->
+    <oauth:authorization-server
+        client-details-service-ref="clientDetails" 
+        token-services-ref="tokenServices"
+        user-approval-handler-ref="userApprovalHandler">
+        <oauth:authorization-code />
+        <oauth:implicit />
+        <oauth:refresh-token />
+        <oauth:client-credentials />
+        <oauth:password authentication-manager-ref="authenticationManager" />
+    </oauth:authorization-server>
+
+    <!-- A Resource Server serves resources that are protected by the OAuth2 
+        token. Spring OAuth provides a Spring Security authentication filter that 
+        implements this protection. -->
+    <oauth:resource-server id="resourceServerFilter" token-services-ref="tokenServices" resource-id="rest_api" />
+
+    <!-- Grants access if only grant (or abstain) votes were received. We can 
+        protect REST resource methods with JSR-250 annotations such as @RolesAllowed -->
+    <bean id="accessDecisionManager" class="org.springframework.security.access.vote.UnanimousBased">
+        <constructor-arg>
+            <list>
+                <bean class="org.springframework.security.access.vote.RoleVoter" />
+                <bean class="org.springframework.security.access.vote.AuthenticatedVoter" />
+            </list>
+        </constructor-arg>
+    </bean>
+
+    <!-- If authentication fails and the caller has asked for a specific content 
+        type response, this entry point can send one, along with a standard 401 status -->
+    <bean id="clientAuthenticationEntryPoint"
+        class="org.springframework.security.oauth2.provider.error.OAuth2AuthenticationEntryPoint">
+        <property name="realmName" value="Authorization/client" />
+        <property name="typeName" value="Basic" />
+    </bean>
+
+    <bean id="oauthAuthenticationEntryPoint"
+        class="org.springframework.security.oauth2.provider.error.OAuth2AuthenticationEntryPoint">
+        <property name="realmName" value="Authorization" />
+    </bean>
+
+    <bean id="oauthAccessDeniedHandler" class="org.springframework.security.oauth2.provider.error.OAuth2AccessDeniedHandler" />
+
+    <!-- Allows clients to authenticate using request parameters if included 
+        as a security filter. It is recommended by the specification that you permit 
+        HTTP basic authentication for clients, and not use this filter at all. -->
+    <bean id="clientCredentialsTokenEndpointFilter"
+        class="org.springframework.security.oauth2.provider.client.ClientCredentialsTokenEndpointFilter">
+        <property name="authenticationManager" ref="authenticationManager" />
+    </bean>
+
+    <bean id="oAuth2ClientContextFilter"
+        class="org.springframework.security.oauth2.client.filter.OAuth2ClientContextFilter">
+    </bean>
+    <bean id="corsSource" class="org.springframework.web.cors.UrlBasedCorsConfigurationSource">
+        <property name="corsConfigurations">
+            <map>
+                <entry key="/**">
+                    <bean class="org.springframework.web.cors.CorsConfiguration">
+                        <property name="allowedOrigins" value="*" ></property>
+                        <property name="allowedHeaders" value="*" ></property>
+                        <property name="maxAge" value="3600" ></property>
+                    </bean>
+                </entry>
+            </map>
+        </property>
+    </bean>
+    <sec:http pattern="/oauth/token" 
+              create-session="always"
+              use-expressions="true" >
+         <sec:cors configuration-source-ref="corsSource"/>
+        <sec:intercept-url pattern="/oauth/token"
+            access="permitAll" />
+        <sec:http-basic entry-point-ref="clientAuthenticationEntryPoint" />
+        <sec:custom-filter ref="clientCredentialsTokenEndpointFilter"
+            before="BASIC_AUTH_FILTER" />
+        <sec:custom-filter ref="oAuth2ClientContextFilter"
+            after="EXCEPTION_TRANSLATION_FILTER" />
+        <sec:access-denied-handler ref="oauthAccessDeniedHandler" />
+        <sec:remember-me/>
+        <sec:csrf disabled="true"/>
+        <!-- <sec:custom-filter ref="csrfFilter" before="LOGOUT_FILTER" />
+        <sec:session-management
+         session-authentication-strategy-ref="sessionAuthenticationStrategy" /> -->
+    </sec:http>
+    
+    <sec:http pattern="/**" 
+              create-session="never"
+              authentication-manager-ref="authenticationManager">
+        <sec:anonymous enabled="false" />
+        <sec:cors configuration-source-ref="corsSource" />
+         <!-- Configuration Home Controller -->
+        <sec:intercept-url pattern="/home" method="GET" access="permitAll"/>
+        
+        <!-- Configuration Account Controller -->
+        <sec:intercept-url pattern="/account**" method="GET" access="permitAll"/>
+        <sec:intercept-url pattern="/account**" method="POST" access="permitAll"/>
+        <sec:intercept-url pattern="/account**" method="DELETE" access="hasRole('ROLE_ADMIN')"/>
+        <sec:intercept-url pattern="/account**" method="PUT" access="permitAll"/>
+        
+        <!-- Configuration Client Controller -->
+        <sec:intercept-url pattern="/client**" method="GET" access="permitAll"/>
+        <sec:intercept-url pattern="/client**" method="POST" access="hasRole('ROLE_ADMIN')"/>
+        <sec:intercept-url pattern="/client**" method="DELETE" access="hasRole('ROLE_ADMIN')"/>
+        <sec:intercept-url pattern="/client**" method="PUT" access="hasAnyRole('ROLE_ADMIN', 'ROLE_CLIENT')"/>
+        
+        <!-- Configuration Service Controller -->
+        <sec:intercept-url pattern="/service**" method="GET" access="permitAll"/>
+        <sec:intercept-url pattern="/service**" method="POST" access="hasRole('ROLE_ADMIN')"/>
+        <sec:intercept-url pattern="/service**" method="DELETE" access="hasRole('ROLE_ADMIN')"/>
+        <sec:intercept-url pattern="/service**" method="PUT" access="hasAnyRole('ROLE_ADMIN', 'ROLE_CLIENT')"/>
+        
+         <!-- Configuration Category Controller -->
+        <sec:intercept-url pattern="/category**" method="GET" access="permitAll"/>
+        <sec:intercept-url pattern="/category**" method="POST" access="hasAnyRole('ROLE_ADMIN','ROLE_CLIENT')"/>
+        <sec:intercept-url pattern="/category**" method="DELETE" access="hasAnyRole('ROLE_ADMIN','ROLE_CLIENT')"/>
+        <sec:intercept-url pattern="/category**" method="PUT" access="hasAnyRole('ROLE_ADMIN', 'ROLE_CLIENT')"/>
+        
+        <!-- Configuration Product Controller -->
+        <sec:intercept-url pattern="/product**" method="GET" access="permitAll"/>
+        <sec:intercept-url pattern="/product**" method="POST" access="hasAnyRole('ROLE_ADMIN','ROLE_CLIENT')"/>
+        <sec:intercept-url pattern="/product**" method="DELETE" access="hasAnyRole('ROLE_ADMIN','ROLE_CLIENT')"/>
+        <sec:intercept-url pattern="/product**" method="PUT" access="hasAnyRole('ROLE_ADMIN', 'ROLE_CLIENT')"/>
+        
+        <!-- Configuration Image Controller -->
+        <sec:intercept-url pattern="/image**" method="GET" access="permitAll"/>
+        <sec:intercept-url pattern="/image**" method="POST" access="hasAnyRole('ROLE_ADMIN','ROLE_CLIENT')"/>
+        <sec:intercept-url pattern="/image**" method="DELETE" access="hasAnyRole('ROLE_ADMIN','ROLE_CLIENT')"/>
+        <sec:intercept-url pattern="/image**" method="PUT" access="hasAnyRole('ROLE_ADMIN', 'ROLE_CLIENT')"/>
+        
+        <!-- Configuration Package Controller -->
+        <sec:intercept-url pattern="/package**" method="GET" access="permitAll"/>
+        <sec:intercept-url pattern="/package**" method="POST" access="hasAnyRole('ROLE_ADMIN','ROLE_CLIENT')"/>
+        <sec:intercept-url pattern="/package**" method="DELETE" access="hasAnyRole('ROLE_ADMIN','ROLE_CLIENT')"/>
+        <sec:intercept-url pattern="/package**" method="PUT" access="hasAnyRole('ROLE_ADMIN', 'ROLE_CLIENT')"/>
+        
+        <!-- Configuration Couple Controller -->
+        <sec:intercept-url pattern="/couple**" method="GET" access="hasAnyRole('ROLE_ADMIN','ROLE_CLIENT','ROLE_COUPLE')"/>
+        <sec:intercept-url pattern="/couple**" method="POST" access="permitAll"/>
+        <sec:intercept-url pattern="/couple**" method="DELETE" access="hasAnyRole('ROLE_ADMIN')"/>
+        <sec:intercept-url pattern="/couple**" method="PUT" access="hasAnyRole('ROLE_ADMIN', 'ROLE_COUPLE')"/>
+        
+        <!-- Configuration Plan Controller -->
+        <sec:intercept-url pattern="/plan**" method="GET" access="hasRole('ROLE_COUPLE')"/>
+        <sec:intercept-url pattern="/plan**" method="POST" access="hasRole('ROLE_COUPLE')"/>
+        <sec:intercept-url pattern="/plan**" method="DELETE" access="hasAnyRole('ROLE_COUPLE','ROLE_ADMIN')"/>
+        <sec:intercept-url pattern="/plan**" method="PUT" access="hasAnyRole('ROLE_ADMIN', 'ROLE_COUPLE')"/>
+        
+        <!-- Configuration Campaign Controller -->
+        <sec:intercept-url pattern="/campaign**" method="GET" access="hasAnyRole('ROLE_COUPLE','ROLE_ADMIN','ROLE_CLIENT')"/>
+        <sec:intercept-url pattern="/campaign**" method="POST" access="hasAnyRole('ROLE_CLIENT','ROLE_ADMIN',)"/>
+        <sec:intercept-url pattern="/campaign**" method="DELETE" access="hasAnyRole('ROLE_CLIENT','ROLE_ADMIN')"/>
+        <sec:intercept-url pattern="/campaign**" method="PUT" access="hasAnyRole('ROLE_ADMIN', 'ROLE_CLIENT')"/>
+        
+        <!-- Configuration Feedback Controller -->
+        <sec:intercept-url pattern="/feedback**" method="GET" access="permitAll"/>
+        <sec:intercept-url pattern="/feedback**" method="POST" access="hasRole('ROLE_COUPLE')"/>
+        <sec:intercept-url pattern="/feedback**" method="DELETE" access="hasRole('ROLE_ADMIN')"/>
+        <sec:intercept-url pattern="/feedback**" method="PUT" access="hasAnyRole('ROLE_ADMIN', 'ROLE_COUPLE')"/>
+        
+        <!-- Configuration Favorite Controller -->
+        <sec:intercept-url pattern="/favorite**" method="GET" access="permitAll"/>
+        <sec:intercept-url pattern="/favorite**" method="POST" access="permitAll"/>
+        <sec:intercept-url pattern="/favorite**" method="DELETE" access="permitAll"/>
+        <sec:intercept-url pattern="/favorite**" method="PUT" access="permitAll"/>
+        
+        <sec:custom-filter ref="resourceServerFilter" before="PRE_AUTH_FILTER" />
+        <sec:http-basic entry-point-ref="oauthAuthenticationEntryPoint" />
+        <sec:access-denied-handler ref="oauthAccessDeniedHandler" />
+        <sec:csrf disabled="true"/>
+        <sec:logout />
+        <!-- <sec:custom-filter ref="csrfFilter" before="LOGOUT_FILTER" />
+        <sec:session-management
+         session-authentication-strategy-ref="sessionAuthenticationStrategy" />  -->
+    </sec:http>
+    <bean id="csrfFilter" class="org.springframework.security.web.csrf.CsrfFilter"> 
+        <constructor-arg index="0" ref="csrfTokenRepository" /> 
+        <property name="accessDeniedHandler">
+            <bean
+                class="org.springframework.security.web.access.AccessDeniedHandlerImpl"> 
+                <property name="errorPage"
+                    value="/WEB-INF/views/common/error/csrfTokenError.jsp" /> 
+            </bean>
+        </property>
+    </bean>
+    <bean id="csrfTokenRepository"
+     class="org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository" /> 
+	<bean id="sessionAuthenticationStrategy"
+		class="org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy"> 
+		<constructor-arg index="0">
+		    <list>
+		        <bean
+		            class="org.springframework.security.web.csrf.CsrfAuthenticationStrategy">  
+			       <constructor-arg index="0"
+			           ref="csrfTokenRepository" />  
+		        </bean>
+		    </list>
+		</constructor-arg>
+	</bean> 
+</beans>
