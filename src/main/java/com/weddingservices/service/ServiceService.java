@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.weddingservices.exceptions.CustomizeException;
-import com.weddingservices.exceptions.resources.JsonMessage;
+import com.weddingservices.exceptions.JsonMessage;
 import com.weddingservices.model.Image;
 import com.weddingservices.repositories.ClientRepository;
 import com.weddingservices.repositories.ImageRepository;

@@ -1,6 +1,5 @@
 package com.weddingservices.controller;
 
-import java.sql.SQLException;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
@@ -26,8 +25,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.weddingservices.exceptions.InvalidRequestException;
 import com.weddingservices.exceptions.CustomizeException;
-import com.weddingservices.exceptions.resources.ErrorResource;
-import com.weddingservices.exceptions.resources.JsonMessage;
+import com.weddingservices.exceptions.JsonMessage;
 import com.weddingservices.model.Client;
 import com.weddingservices.model.OauthClientDetails;
 import com.weddingservices.model.Service;

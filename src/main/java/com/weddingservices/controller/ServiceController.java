@@ -33,7 +33,7 @@ import com.weddingservices.enums.RoleEnum;
 import com.weddingservices.enums.StateEnum;
 import com.weddingservices.exceptions.CustomizeException;
 import com.weddingservices.exceptions.InvalidRequestException;
-import com.weddingservices.exceptions.resources.JsonMessage;
+import com.weddingservices.exceptions.JsonMessage;
 import com.weddingservices.model.Category;
 import com.weddingservices.model.Client;
 import com.weddingservices.model.Image;

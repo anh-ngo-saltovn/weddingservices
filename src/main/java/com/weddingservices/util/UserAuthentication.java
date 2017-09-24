@@ -10,7 +10,7 @@ import org.springframework.security.oauth2.client.resource.OAuth2AccessDeniedExc
 import org.springframework.stereotype.Service;
 
 import com.weddingservices.exceptions.CustomizeException;
-import com.weddingservices.exceptions.resources.JsonMessage;
+import com.weddingservices.exceptions.JsonMessage;
 import com.weddingservices.model.OauthClientDetails;
 
 @Service

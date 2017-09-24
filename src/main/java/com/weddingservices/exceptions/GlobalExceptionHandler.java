@@ -1,7 +1,10 @@
 package com.weddingservices.exceptions;
 
+
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,9 +18,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import com.weddingservices.exceptions.resources.ErrorResource;
-import com.weddingservices.exceptions.resources.FieldErrorResource;
-import com.weddingservices.exceptions.resources.JsonMessage;
+
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler{
@@ -69,4 +70,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler{
 
         return handleExceptionInternal(e, error, headers, HttpStatus.UNPROCESSABLE_ENTITY, request);
     }
+	
+	@ExceptionHandler(value = {Exception.class, RuntimeException.class})
+    public ResponseEntity<Object> defaultErrorHandler(HttpServletRequest request, Exception e) {
+		logger.warn(e.getMessage());
+		CustomizeException existException = (CustomizeException) e;
+		JsonMessage errorResource = (JsonMessage)existException.getObj();
+		HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+		return handleExceptionInternal(e, errorResource, headers,HttpStatus.valueOf(errorResource.getState()), (WebRequest) request);
+    }
+	
 }

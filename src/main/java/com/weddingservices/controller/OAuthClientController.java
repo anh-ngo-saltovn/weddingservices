@@ -22,7 +22,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.weddingservices.exceptions.CustomizeException;
 import com.weddingservices.exceptions.InvalidRequestException;
-import com.weddingservices.exceptions.resources.JsonMessage;
+import com.weddingservices.exceptions.JsonMessage;
 import com.weddingservices.model.OauthClientDetails;
 import com.weddingservices.repositories.OAuthClientDetailRepository;
 import com.weddingservices.util.UserAuthentication;
